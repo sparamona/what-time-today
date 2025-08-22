@@ -18,7 +18,95 @@
 
 .Body {
   flex: 1;
-  padding: 20px 20px 0px 20px;
+  padding: 20px 20px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 80px); /* Subtract header height */
+}
+
+/* New sidebar layout */
+.main-layout {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  min-height: 0; /* Important for flex children to respect height constraints */
+}
+
+.calendar-section {
+  flex: 1;
+  min-width: 0; /* Allows flex item to shrink below content size */
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar {
+  width: 350px;
+  flex-shrink: 0;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.sidebar-content {
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-title {
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.availability-section {
+  margin-top: 20px;
+  flex: 1;
+}
+
+.availability-title {
+  margin-bottom: 10px;
+  color: #555;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.options-section {
+  margin-bottom: 20px;
+}
+
+.options-section .btn,
+.options-section .dropdown {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.options-section .dropdown-toggle {
+  width: 100%;
+  text-align: left;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.action-buttons .btn {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* Remove spacing between availability lines */
+.output-card .MuiCardContent-root {
+  padding: 16px !important;
+}
+
+.output-card .MuiCardContent-root p {
+  margin-bottom: 0 !important;
+  line-height: 1.4;
 }
 
 .peep1 {
@@ -75,8 +163,23 @@
 
 .copytext {
   display: flex;
-  flex-direction: row;
-  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Responsive adjustments for buttons in sidebar */
+.copytext .btn {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.copytext .dropdown {
+  width: 100%;
+}
+
+.copytext .dropdown-toggle {
+  width: 100%;
+  text-align: left;
 }
 
 .not-homepage {
@@ -89,6 +192,13 @@
 
 .output-card {
   margin-bottom: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.output-card .MuiList-root {
+  flex: 1;
 }
 
 #lol {
@@ -189,7 +299,40 @@
   }
 
   .Body {
-    padding: 20px 20px 0px 20px;
+    padding: 20px 20px 20px 20px;
+    height: calc(100vh - 60px); /* Adjust for smaller header on mobile */
+  }
+
+  /* Responsive layout for smaller screens */
+  .main-layout {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .sidebar {
+    width: 100%;
+    order: -1; /* Move sidebar above calendar on mobile */
+  }
+
+  .sidebar-content {
+    padding: 15px;
+  }
+
+  .copytext {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .copytext .btn {
+    width: auto;
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .copytext .dropdown {
+    width: auto;
+    flex: 1;
   }
 }
 

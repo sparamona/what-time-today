@@ -66,217 +66,222 @@ const classes = makeStyles({
 });
 
 export default function Home() {
+  const dispatch = useDispatch();
   const [MonthDay, setMonthDay] = useState(true);
-  const [timeZone, setTimeZone] = useState(offset);
-  const [timeZones, setTimeZones] = useState(
+  const [selectedTimeZones, setSelectedTimeZones] = useState([offset]);
+  const [availableTimeZones, setAvailableTimeZones] = useState(
     AllTimeZones.filter((tz) => tz !== offset)
   );
   const [AMPM, setAMPM] = useState(true);
   const [messageType, setMessageType] = useState(messageTypes[0]);
+
   useEffect(() => {
-    setTimeZones(AllTimeZones.filter((tz) => tz !== timeZone));
-  }, [timeZone]);
+    setAvailableTimeZones(AllTimeZones.filter((tz) => !selectedTimeZones.includes(tz)));
+  }, [selectedTimeZones]);
+
   const { availabilities } = useSelector(getAvailabilities);
 
-  function Toolbar({ AMPM, setAMPM, availabilities }) {
-    var width = window.innerWidth;
+  const handleTimeZoneToggle = (timeZone) => {
+    if (selectedTimeZones.includes(timeZone)) {
+      // Remove timezone if already selected (but keep at least one)
+      if (selectedTimeZones.length > 1) {
+        setSelectedTimeZones(selectedTimeZones.filter(tz => tz !== timeZone));
+      }
+    } else {
+      // Add timezone if not selected
+      setSelectedTimeZones([...selectedTimeZones, timeZone]);
+    }
+  };
 
-    const handleAMPMChange = (val) => {
-      setAMPM(val.length !== 0);
-    };
+  const getTimeZoneDisplayTitle = () => {
+    if (selectedTimeZones.length === 1) {
+      return moment().tz(selectedTimeZones[0]).zoneAbbr();
+    } else {
+      return `${selectedTimeZones.length} zones selected`;
+    }
+  };
 
-    const handleMonthDayChange = (val) => {
-      setMonthDay(val.length !== 0);
-    };
 
-    const dispatch = useDispatch();
-
-    return (
-      <div className="copytext">
-        {document.queryCommandSupported("copy") && (
-          <OverlayTrigger
-            placement={"top"}
-            overlay={<Tooltip>Copy to your clipboard.</Tooltip>}
-          >
-            <Button
-              variant="Light"
-              onClick={(e) => {
-                var xhr = new XMLHttpRequest();
-                xhr.open(
-                  "GET",
-                  "https://api.countapi.xyz/hit/whattime.today/copy"
-                );
-                xhr.responseType = "json";
-                xhr.send();
-                copyToClipboard(
-                  e,
-                  "lol",
-                  availabilities,
-                  timeZone,
-                  messageType,
-                  AMPM,
-                  MonthDay
-                );
-              }}
-            >
-              Copy
-            </Button>
-          </OverlayTrigger>
-        )}
-
-        <OverlayTrigger
-          placement={"top"}
-          overlay={<Tooltip>Clean up your mess.</Tooltip>}
-        >
-          <Button
-            variant="Light"
-            onClick={() => {
-              dispatch(clearAvailabilities());
-            }}
-          >
-            Clear
-          </Button>
-        </OverlayTrigger>
-
-        <OverlayTrigger
-          placement={"top"}
-          overlay={
-            <Tooltip>
-              Don't be rude, send it to them in <strong>their</strong> time
-              zone.
-            </Tooltip>
-          }
-        >
-          <DropdownButton
-            variant="Light"
-            drop="down"
-            data-flip="false"
-            data-display="static"
-            id="dropdown-button-drop-down"
-            title={moment().tz(timeZone).zoneAbbr()}
-          >
-            {timeZones
-              .sort((a, b) => a > b)
-              .map((timeZone, i) => (
-                <Dropdown.Item
-                  key={i}
-                  data-display="static"
-                  data-flip="false"
-                  as="a"
-                  onClick={() => {
-                    setTimeZone(timeZone);
-                  }}
-                >
-                  {width < 850
-                    ? moment().tz(timeZone).zoneAbbr()
-                    : moment().tz(timeZone).zoneAbbr() + " - " + timeZone}
-                </Dropdown.Item>
-              ))}
-          </DropdownButton>
-        </OverlayTrigger>
-
-        <OverlayTrigger
-          placement={"top"}
-          overlay={<Tooltip>Don't be boring.</Tooltip>}
-        >
-          <DropdownButton
-            variant="Light"
-            drop="down"
-            id="dropdown-button-drop-down"
-            title={messageType}
-          >
-            {messageTypes.map((type, i) => (
-              <Dropdown.Item
-                key={i}
-                as="a"
-                onClick={() => {
-                  setMessageType(type);
-                }}
-              >
-                {type}
-              </Dropdown.Item>
-            ))}
-          </DropdownButton>
-        </OverlayTrigger>
-
-        <OverlayTrigger
-          placement={"top"}
-          overlay={<Tooltip>Not everyone is from America.</Tooltip>}
-        >
-          <ToggleButtonGroup
-            type="checkbox"
-            defaultValue={1}
-            onChange={handleAMPMChange}
-          >
-            <ToggleButton value={1} variant="Light">
-              AM/PM
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </OverlayTrigger>
-
-        <OverlayTrigger
-          placement={"top"}
-          overlay={<Tooltip>Again, not everyone is from America.</Tooltip>}
-        >
-          <ToggleButtonGroup
-            type="checkbox"
-            defaultValue={1}
-            onChange={handleMonthDayChange}
-          >
-            <ToggleButton value={1} variant="Light">
-              {width < 600
-                ? MonthDay
-                  ? "M/D"
-                  : "D/M"
-                : MonthDay
-                ? "Month/Day"
-                : "Day/Month"}
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </OverlayTrigger>
-      </div>
-    );
-  }
 
   return (
     <div className="Body">
-      <div className="Calendar">
-        <MyCalendar initDate={new Date()} />
-      </div>
-      <div>
-        <div className="below-calendar">
-          <div id="lol">
-            <Toolbar
-              AMPM={AMPM}
-              setAMPM={setAMPM}
-              availabilities={availabilities}
-            />
-            <Card
-              className="output-card"
-              classes={{ root: classes.card }}
-              variant="outlined"
-            >
-              <List style={{ maxHeight: 150, overflow: "auto" }}>
-                <CardContent>
-                  {outputToString(
-                    availabilities,
-                    timeZone,
-                    messageType,
-                    AMPM,
-                    MonthDay
-                  ).map((out, i) => {
-                    return (
-                      <p key={i} style={{ textAlign: "left", fontSize: 13 }}>
-                        {out}
+      <div className="main-layout">
+        <div className="calendar-section">
+          <MyCalendar initDate={new Date()} />
+        </div>
+        <div className="sidebar">
+          <div className="sidebar-content">
+            <h4 className="sidebar-title">Options</h4>
+            <div className="options-section">
+              <OverlayTrigger
+                placement={"top"}
+                overlay={
+                  <Tooltip>
+                    Select multiple time zones to show availability in different zones.
+                  </Tooltip>
+                }
+              >
+                <DropdownButton
+                  variant="Light"
+                  drop="down"
+                  data-flip="false"
+                  data-display="static"
+                  id="dropdown-button-drop-down"
+                  title={getTimeZoneDisplayTitle()}
+                >
+                  {/* Show selected timezones first */}
+                  {selectedTimeZones.map((timeZone, i) => (
+                    <Dropdown.Item
+                      key={`selected-${i}`}
+                      data-display="static"
+                      data-flip="false"
+                      as="a"
+                      onClick={() => handleTimeZoneToggle(timeZone)}
+                      style={{ backgroundColor: '#e3f2fd', fontWeight: 'bold' }}
+                    >
+                      ✓ {window.innerWidth < 850
+                        ? moment().tz(timeZone).zoneAbbr()
+                        : moment().tz(timeZone).zoneAbbr() + " - " + timeZone}
+                    </Dropdown.Item>
+                  ))}
+
+                  {selectedTimeZones.length > 0 && availableTimeZones.length > 0 && (
+                    <Dropdown.Divider />
+                  )}
+
+                  {/* Show available timezones */}
+                  {availableTimeZones
+                    .sort((a, b) => a > b)
+                    .map((timeZone, i) => (
+                      <Dropdown.Item
+                        key={`available-${i}`}
+                        data-display="static"
+                        data-flip="false"
+                        as="a"
+                        onClick={() => handleTimeZoneToggle(timeZone)}
+                      >
+                        {window.innerWidth < 850
+                          ? moment().tz(timeZone).zoneAbbr()
+                          : moment().tz(timeZone).zoneAbbr() + " - " + timeZone}
+                      </Dropdown.Item>
+                    ))}
+                </DropdownButton>
+              </OverlayTrigger>
+
+              <OverlayTrigger
+                placement={"top"}
+                overlay={<Tooltip>12hr vs 24hr time format.</Tooltip>}
+              >
+                <ToggleButtonGroup
+                  type="checkbox"
+                  defaultValue={1}
+                  onChange={(val) => setAMPM(val.length !== 0)}
+                >
+                  <ToggleButton value={1} variant="Light">
+                    {AMPM ? "AM/PM" : "24hr"}
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </OverlayTrigger>
+
+              <OverlayTrigger
+                placement={"top"}
+                overlay={<Tooltip>Again, not everyone is from America.</Tooltip>}
+              >
+                <ToggleButtonGroup
+                  type="checkbox"
+                  defaultValue={1}
+                  onChange={(val) => setMonthDay(val.length !== 0)}
+                >
+                  <ToggleButton value={1} variant="Light">
+                    {MonthDay ? "Month/Day" : "Day/Month"}
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </OverlayTrigger>
+            </div>
+
+            <div className="availability-section">
+              <h5 className="availability-title">Your Availability</h5>
+              <Card
+                className="output-card"
+                classes={{ root: classes.card }}
+                variant="outlined"
+              >
+                <List style={{ maxHeight: 300, overflow: "auto" }}>
+                  <CardContent>
+                    {availabilities.length === 0 ? (
+                      <p style={{ textAlign: "center", fontSize: 13, color: "#666", fontStyle: "italic" }}>
+                        Nothing selected. Click and drag on the calendar to select availability.
                       </p>
-                    );
-                  })}
-                </CardContent>
-              </List>
-            </Card>
+                    ) : (
+                      outputToString(
+                        availabilities,
+                        selectedTimeZones,
+                        messageType,
+                        AMPM,
+                        MonthDay
+                      ).map((out, i) => {
+                        return (
+                          <p key={i} style={{ textAlign: "left", fontSize: 13, marginBottom: 0 }}>
+                            {out}
+                          </p>
+                        );
+                      })
+                    )}
+                  </CardContent>
+                </List>
+              </Card>
+
+              <div className="action-buttons">
+                {document.queryCommandSupported("copy") && (
+                  <OverlayTrigger
+                    placement={"top"}
+                    overlay={<Tooltip>Copy to your clipboard.</Tooltip>}
+                  >
+                    <Button
+                      variant="Light"
+                      onClick={(e) => {
+                        var xhr = new XMLHttpRequest();
+                        xhr.open(
+                          "GET",
+                          "https://api.countapi.xyz/hit/whattime.today/copy"
+                        );
+                        xhr.responseType = "json";
+                        xhr.send();
+                        copyToClipboard(
+                          e,
+                          "lol",
+                          availabilities,
+                          selectedTimeZones,
+                          messageType,
+                          AMPM,
+                          MonthDay
+                        );
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </OverlayTrigger>
+                )}
+
+                <OverlayTrigger
+                  placement={"top"}
+                  overlay={<Tooltip>Clean up your mess.</Tooltip>}
+                >
+                  <Button
+                    variant="Light"
+                    onClick={() => {
+                      dispatch(clearAvailabilities());
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </OverlayTrigger>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+      <div id="lol" style={{ visibility: "hidden" }}></div>
     </div>
   );
 }

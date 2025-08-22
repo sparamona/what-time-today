@@ -35,7 +35,7 @@ export default function MyCalendar() {
     width > 600 ? ["work_week", "week", "day"] : ["day"];
   const defaultCalendarView = width > 600 ? "work_week" : "day";
 
-  var height = 500;
+  var height = "100%";
 
   return (
     <div className="MyCalendar">
@@ -43,7 +43,7 @@ export default function MyCalendar() {
         <Paper
           className="calendar-paper"
           style={{
-            maxHeight: height,
+            height: "100%",
             overflow: "auto",
             marginRight: 20,
             width: "15%",

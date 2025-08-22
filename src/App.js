@@ -5,7 +5,7 @@ import { useDispatch } from "react-redux";
 import Privacy from "./components/privacy/Privacy";
 import About from "./components/about/About";
 import Header from "./components/header/Header";
-import Footer from "./components/footer/Footer";
+
 import { handleClientLoad, handleAuthClick } from "./util/auth";
 import {
   signIn,
@@ -24,17 +24,10 @@ function App() {
 
   const setUserCallback = (user) => {
     if (user) {
-      let userProfile = user.getBasicProfile();
-      let newUser = {
-        firstName: userProfile.getGivenName(),
-        lastName: userProfile.getFamilyName(),
-        email: userProfile.getEmail(),
-        img: userProfile.getImageUrl(),
-      };
-      dispatch(signIn(newUser));
+      dispatch(signIn(user));
       getAndDisplayEvents(dispatch);
     } else {
-      // dispatch(signOut());
+      dispatch(signOut());
     }
   };
 
@@ -72,7 +65,7 @@ function App() {
           </Route>
           <Route path="/">{<Home />}</Route>
         </Switch>
-        <Footer />
+
       </Router>
     </div>
   );

@@ -24,9 +24,11 @@ function formatAMPM(date) {
   return strTime;
 }
 
-export function outputToString(output, timeZone, messageType, AMPM, MonthDay) {
-  // Currently only supporting single day availabilities
-  if (!timeZone) {
+export function outputToString(output, timeZones, messageType, AMPM, MonthDay) {
+  // Support both single timezone (backward compatibility) and multiple timezones
+  const timeZoneArray = Array.isArray(timeZones) ? timeZones : [timeZones];
+
+  if (!timeZoneArray || timeZoneArray.length === 0) {
     return ["Copy not working!! Notify me in the feedback form please!"];
   }
 
@@ -41,37 +43,51 @@ export function outputToString(output, timeZone, messageType, AMPM, MonthDay) {
 
   // Construct resulting string
   var result = [];
-  for (let i = 0; i < output.length; i++) {
+  for (let i = 0; i < sortedOutput.length; i++) {
     let out = sortedOutput[i];
 
-    let start = new Date(
-      out.start.toLocaleString("en-US", { timeZone: timeZone })
+    // Create time strings for each timezone
+    let timeStrings = [];
+
+    for (let tzIndex = 0; tzIndex < timeZoneArray.length; tzIndex++) {
+      const timeZone = timeZoneArray[tzIndex];
+
+      let start = new Date(
+        out.start.toLocaleString("en-US", { timeZone: timeZone })
+      );
+      let end = new Date(out.end.toLocaleString("en-US", { timeZone: timeZone }));
+      var shorttz = moment().tz(timeZone).zoneAbbr();
+
+      let startTime = AMPM
+        ? formatAMPM(start)
+        : start.getHours() +
+          ":" +
+          (start.getMinutes() < 10 ? "0" : "") +
+          start.getMinutes();
+      let endTime = AMPM
+        ? formatAMPM(end)
+        : end.getHours() +
+          ":" +
+          (end.getMinutes() < 10 ? "0" : "") +
+          end.getMinutes();
+
+      timeStrings.push(`${startTime} - ${endTime} ${shorttz}`);
+    }
+
+    // Get day info from the first timezone
+    let firstStart = new Date(
+      out.start.toLocaleString("en-US", { timeZone: timeZoneArray[0] })
     );
-    let end = new Date(out.end.toLocaleString("en-US", { timeZone: timeZone }));
-    // var longtz = out.start.toTimeString().match(/\((.+)\)/)[1];
-    var shorttz = moment().tz(timeZone).zoneAbbr();
+    let day = dayNames[firstStart.getDay()];
+    let monthNum = firstStart.getMonth() + 1;
+    let dayNum = firstStart.getDate();
 
-    // let month = monthNames[out.start.getMonth()];
-    let day = dayNames[start.getDay()];
-    let monthNum = start.getMonth() + 1;
-    let dayNum = start.getDate();
-
-    let startTime = AMPM
-      ? formatAMPM(start)
-      : start.getHours() +
-        ":" +
-        (start.getMinutes() < 10 ? "0" : "") +
-        start.getMinutes();
-    let endTime = AMPM
-      ? formatAMPM(end)
-      : end.getHours() +
-        ":" +
-        (end.getMinutes() < 10 ? "0" : "") +
-        end.getMinutes();
+    // Combine all timezone strings with " / " separator
+    let timeString = timeStrings.join(" / ");
 
     let singleResult = MonthDay
-      ? `${day} (${monthNum}/${dayNum}) ${startTime} - ${endTime} ${shorttz}`
-      : `${day} (${dayNum}/${monthNum}) ${startTime} - ${endTime} ${shorttz}`;
+      ? `${day} (${monthNum}/${dayNum}) ${timeString}`
+      : `${day} (${dayNum}/${monthNum}) ${timeString}`;
 
     result.push(singleResult);
   }
@@ -105,12 +121,12 @@ export function outputToString(output, timeZone, messageType, AMPM, MonthDay) {
 
 export function outputToStringCopy(
   output,
-  timeZone,
+  timeZones,
   messageType,
   AMPM,
   MonthDay
 ) {
-  var out = outputToString(output, timeZone, messageType, AMPM, MonthDay);
-  var result = out.join("\r\n");
+  var out = outputToString(output, timeZones, messageType, AMPM, MonthDay);
+  var result = out.join("\n");
   return result;
 }
