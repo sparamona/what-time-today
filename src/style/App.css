@@ -40,11 +40,49 @@
 }
 
 .sidebar {
-  width: 350px;
+  min-width: 250px;
+  max-width: 600px;
   flex-shrink: 0;
   background-color: #f8f9fa;
   border-radius: 8px;
   border: 1px solid #e9ecef;
+  position: relative;
+}
+
+.resize-handle {
+  width: 4px;
+  background-color: #dee2e6;
+  cursor: col-resize;
+  flex-shrink: 0;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.resize-handle:hover {
+  background-color: #007bff;
+}
+
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -2px;
+  right: -2px;
+  bottom: 0;
+  background: transparent;
+}
+
+/* Active resizing state */
+.main-layout.resizing {
+  user-select: none;
+}
+
+.main-layout.resizing .resize-handle {
+  background-color: #007bff;
+}
+
+.main-layout.resizing * {
+  pointer-events: none;
 }
 
 .sidebar-content {
@@ -107,6 +145,13 @@
 .output-card .MuiCardContent-root p {
   margin-bottom: 0 !important;
   line-height: 1.4;
+}
+
+/* Table format styling */
+.output-card .MuiCardContent-root p[style*="monospace"] {
+  font-size: 12px !important;
+  line-height: 1.3;
+  letter-spacing: 0.5px;
 }
 
 .peep1 {
@@ -309,9 +354,15 @@
     gap: 15px;
   }
 
+  .resize-handle {
+    display: none; /* Hide resize handle on mobile */
+  }
+
   .sidebar {
-    width: 100%;
+    width: 100% !important; /* Override inline width on mobile */
     order: -1; /* Move sidebar above calendar on mobile */
+    min-width: unset;
+    max-width: unset;
   }
 
   .sidebar-content {

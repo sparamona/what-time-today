@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import { useSelector, useDispatch } from "react-redux";
 import CardContent from "@material-ui/core/CardContent";
@@ -23,6 +23,15 @@ import MyCalendar from "./mycalendar/MyCalendar.js";
 
 const moment = require("moment-timezone");
 
+// Custom timezone abbreviations
+function getCustomTimezoneAbbr(timezone) {
+  const customAbbreviations = {
+    'Asia/Ho_Chi_Minh': 'ICT'
+  };
+
+  return customAbbreviations[timezone] || moment().tz(timezone).zoneAbbr();
+}
+
 var offset = Intl.DateTimeFormat().resolvedOptions().timeZone;
 var USTimeZones = [
   "America/Los_Angeles",
@@ -30,7 +39,11 @@ var USTimeZones = [
   "America/Chicago",
   "America/New_York",
 ];
-var WorldWideTimeZones = [
+var PriorityTimeZones = [
+  "Etc/GMT",
+  "Asia/Ho_Chi_Minh",
+];
+var OtherTimeZones = [
   "Asia/Kolkata",
   "Asia/Shanghai",
   "Asia/Hong_Kong",
@@ -39,13 +52,15 @@ var WorldWideTimeZones = [
   "Australia/Darwin",
   "Europe/Paris",
   "Europe/Berlin",
-  "Etc/GMT",
 ];
+
+// Reorder: US timezones, GMT, ICT, then the rest
 var AllTimeZones = [
   offset,
   ...USTimeZones.filter((tz) => tz !== offset),
-  ...WorldWideTimeZones.filter((tz) => tz !== offset),
-].sort((a, b) => a > b);
+  ...PriorityTimeZones.filter((tz) => tz !== offset),
+  ...OtherTimeZones.filter((tz) => tz !== offset),
+];
 
 export const messageTypes = [
   "Boring",
@@ -54,6 +69,7 @@ export const messageTypes = [
   "Elon",
   "Raw",
   "Inverse",
+  "Table",
 ];
 
 const classes = makeStyles({
@@ -74,6 +90,8 @@ export default function Home() {
   );
   const [AMPM, setAMPM] = useState(true);
   const [messageType, setMessageType] = useState(messageTypes[0]);
+  const [sidebarWidth, setSidebarWidth] = useState(350);
+  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     setAvailableTimeZones(AllTimeZones.filter((tz) => !selectedTimeZones.includes(tz)));
@@ -95,21 +113,80 @@ export default function Home() {
 
   const getTimeZoneDisplayTitle = () => {
     if (selectedTimeZones.length === 1) {
-      return moment().tz(selectedTimeZones[0]).zoneAbbr();
+      return getCustomTimezoneAbbr(selectedTimeZones[0]);
     } else {
       return `${selectedTimeZones.length} zones selected`;
     }
   };
 
+  // Resize functionality
+  const handleMouseDown = (e) => {
+    setIsResizing(true);
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isResizing) return;
+
+    e.preventDefault();
+
+    // Calculate new width based on mouse position relative to window
+    const newWidth = window.innerWidth - e.clientX;
+
+    // Set min and max width constraints
+    const minWidth = 250;
+    const maxWidth = Math.min(600, window.innerWidth * 0.6);
+
+    if (newWidth >= minWidth && newWidth <= maxWidth) {
+      setSidebarWidth(newWidth);
+    }
+  }, [isResizing]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  // Add event listeners for mouse move and up on the document
+  useEffect(() => {
+    if (isResizing) {
+      const handleGlobalMouseMove = (e) => handleMouseMove(e);
+      const handleGlobalMouseUp = (e) => handleMouseUp(e);
+      const handleKeyDown = (e) => {
+        // Escape key to cancel resize
+        if (e.key === 'Escape') {
+          setIsResizing(false);
+        }
+      };
+
+      document.addEventListener('mousemove', handleGlobalMouseMove, { passive: false });
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('mouseleave', handleGlobalMouseUp); // Stop resize if mouse leaves window
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      return () => {
+        document.removeEventListener('mousemove', handleGlobalMouseMove);
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+        document.removeEventListener('keydown', handleKeyDown);
+        document.removeEventListener('mouseleave', handleGlobalMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+    }
+  }, [isResizing, handleMouseMove, handleMouseUp]);
+
 
 
   return (
     <div className="Body">
-      <div className="main-layout">
+      <div className={`main-layout ${isResizing ? 'resizing' : ''}`}>
         <div className="calendar-section">
           <MyCalendar initDate={new Date()} />
         </div>
-        <div className="sidebar">
+        <div className="resize-handle" onMouseDown={handleMouseDown}></div>
+        <div className="sidebar" style={{ width: sidebarWidth }}>
           <div className="sidebar-content">
             <h4 className="sidebar-title">Options</h4>
             <div className="options-section">
@@ -140,8 +217,8 @@ export default function Home() {
                       style={{ backgroundColor: '#e3f2fd', fontWeight: 'bold' }}
                     >
                       ✓ {window.innerWidth < 850
-                        ? moment().tz(timeZone).zoneAbbr()
-                        : moment().tz(timeZone).zoneAbbr() + " - " + timeZone}
+                        ? getCustomTimezoneAbbr(timeZone)
+                        : getCustomTimezoneAbbr(timeZone) + " - " + timeZone}
                     </Dropdown.Item>
                   ))}
 
@@ -161,8 +238,8 @@ export default function Home() {
                         onClick={() => handleTimeZoneToggle(timeZone)}
                       >
                         {window.innerWidth < 850
-                          ? moment().tz(timeZone).zoneAbbr()
-                          : moment().tz(timeZone).zoneAbbr() + " - " + timeZone}
+                          ? getCustomTimezoneAbbr(timeZone)
+                          : getCustomTimezoneAbbr(timeZone) + " - " + timeZone}
                       </Dropdown.Item>
                     ))}
                 </DropdownButton>
@@ -197,6 +274,31 @@ export default function Home() {
                   </ToggleButton>
                 </ToggleButtonGroup>
               </OverlayTrigger>
+
+              <OverlayTrigger
+                placement={"top"}
+                overlay={<Tooltip>Choose your message style or format.</Tooltip>}
+              >
+                <DropdownButton
+                  variant="Light"
+                  drop="down"
+                  id="message-type-dropdown"
+                  title={messageType}
+                >
+                  {messageTypes.map((type, i) => (
+                    <Dropdown.Item
+                      key={i}
+                      as="a"
+                      onClick={() => {
+                        setMessageType(type);
+                      }}
+                      style={messageType === type ? { backgroundColor: '#e3f2fd', fontWeight: 'bold' } : {}}
+                    >
+                      {messageType === type ? '✓ ' : ''}{type}
+                    </Dropdown.Item>
+                  ))}
+                </DropdownButton>
+              </OverlayTrigger>
             </div>
 
             <div className="availability-section">
@@ -220,8 +322,22 @@ export default function Home() {
                         AMPM,
                         MonthDay
                       ).map((out, i) => {
+                        const isTableFormat = messageType === "Table";
+                        const isTableHeader = isTableFormat && (i === 0 || i === 2 || i === 3); // Header, empty line, or separator
+                        const isTableSeparator = isTableFormat && out.includes("---");
+
                         return (
-                          <p key={i} style={{ textAlign: "left", fontSize: 13, marginBottom: 0 }}>
+                          <p
+                            key={i}
+                            style={{
+                              textAlign: "left",
+                              fontSize: 13,
+                              marginBottom: 0,
+                              fontFamily: isTableFormat ? 'monospace' : 'inherit',
+                              fontWeight: isTableHeader && !isTableSeparator ? 'bold' : 'normal',
+                              whiteSpace: isTableFormat ? 'pre' : 'normal'
+                            }}
+                          >
                             {out}
                           </p>
                         );

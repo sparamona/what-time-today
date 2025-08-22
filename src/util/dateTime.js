@@ -12,6 +12,15 @@ const dayNames = [
 
 const moment = require("moment-timezone");
 
+// Custom timezone abbreviations
+function getCustomTimezoneAbbr(timezone) {
+  const customAbbreviations = {
+    'Asia/Ho_Chi_Minh': 'ICT'
+  };
+
+  return customAbbreviations[timezone] || moment().tz(timezone).zoneAbbr();
+}
+
 // https://stackoverflow.com/questions/8888491/how-do-you-display-javascript-datetime-in-12-hour-am-pm-format
 function formatAMPM(date) {
   var hours = date.getHours();
@@ -19,9 +28,102 @@ function formatAMPM(date) {
   var ampm = hours >= 12 ? "pm" : "am";
   hours = hours % 12;
   hours = hours ? hours : 12; // the hour '0' should be '12'
-  minutes = minutes < 10 ? "0" + minutes : minutes;
-  var strTime = hours + ":" + minutes + " " + ampm;
+
+  // Only show minutes if not :00
+  var strTime = minutes === 0 ? hours + ampm : hours + ":" + (minutes < 10 ? "0" + minutes : minutes) + ampm;
   return strTime;
+}
+
+// Generate table format for availability
+function generateTableFormat(output, timeZoneArray, AMPM, MonthDay) {
+  if (output.length === 0) return [];
+
+  // Sort by start time
+  var sortedOutput = [...output];
+  sortedOutput.sort((a, b) => a.start - b.start);
+
+  // Group by date
+  const dateGroups = {};
+
+  sortedOutput.forEach(out => {
+    // Use first timezone to determine the date
+    const firstStart = new Date(
+      out.start.toLocaleString("en-US", { timeZone: timeZoneArray[0] })
+    );
+    const day = dayNames[firstStart.getDay()];
+    const monthNum = firstStart.getMonth() + 1;
+    const dayNum = firstStart.getDate();
+
+    const dateKey = MonthDay
+      ? `${day} (${monthNum}/${dayNum})`
+      : `${day} (${dayNum}/${monthNum})`;
+
+    if (!dateGroups[dateKey]) {
+      dateGroups[dateKey] = [];
+    }
+    dateGroups[dateKey].push(out);
+  });
+
+  const result = [];
+
+  // First pass: collect all data to calculate optimal column widths
+  const allRows = [];
+  const headers = ["Date", ...timeZoneArray.map(tz => getCustomTimezoneAbbr(tz))];
+
+  // Collect all data rows
+  Object.entries(dateGroups).forEach(([dateKey, availabilities]) => {
+    availabilities.forEach(out => {
+      const row = [dateKey];
+
+      timeZoneArray.forEach(timeZone => {
+        const start = new Date(
+          out.start.toLocaleString("en-US", { timeZone: timeZone })
+        );
+        const end = new Date(
+          out.end.toLocaleString("en-US", { timeZone: timeZone })
+        );
+
+        const startTime = AMPM
+          ? formatAMPM(start)
+          : start.getMinutes() === 0
+            ? start.getHours().toString()
+            : start.getHours() + ":" + (start.getMinutes() < 10 ? "0" : "") + start.getMinutes();
+        const endTime = AMPM
+          ? formatAMPM(end)
+          : end.getMinutes() === 0
+            ? end.getHours().toString()
+            : end.getHours() + ":" + (end.getMinutes() < 10 ? "0" : "") + end.getMinutes();
+
+        const timeSlot = `${startTime}-${endTime}`;
+        row.push(timeSlot);
+      });
+
+      allRows.push(row);
+    });
+  });
+
+  // Calculate optimal column widths based on actual content
+  const columnWidths = headers.map((header, colIndex) => {
+    const headerWidth = header.length;
+    const dataWidths = allRows.map(row => row[colIndex] ? row[colIndex].length : 0);
+    return Math.max(headerWidth, ...dataWidths);
+  });
+
+  // Create header row with calculated widths
+  const headerRow = headers.map((header, i) => header.padEnd(columnWidths[i]));
+  result.push(headerRow.join(" | "));
+
+  // Create separator row
+  const separatorRow = columnWidths.map(width => "-".repeat(width));
+  result.push(separatorRow.join(" | "));
+
+  // Create data rows with calculated widths
+  allRows.forEach(row => {
+    const paddedRow = row.map((cell, i) => cell.padEnd(columnWidths[i]));
+    result.push(paddedRow.join(" | "));
+  });
+
+  return result;
 }
 
 export function outputToString(output, timeZones, messageType, AMPM, MonthDay) {
@@ -56,22 +158,20 @@ export function outputToString(output, timeZones, messageType, AMPM, MonthDay) {
         out.start.toLocaleString("en-US", { timeZone: timeZone })
       );
       let end = new Date(out.end.toLocaleString("en-US", { timeZone: timeZone }));
-      var shorttz = moment().tz(timeZone).zoneAbbr();
+      var shorttz = getCustomTimezoneAbbr(timeZone);
 
       let startTime = AMPM
         ? formatAMPM(start)
-        : start.getHours() +
-          ":" +
-          (start.getMinutes() < 10 ? "0" : "") +
-          start.getMinutes();
+        : start.getMinutes() === 0
+          ? start.getHours().toString()
+          : start.getHours() + ":" + (start.getMinutes() < 10 ? "0" : "") + start.getMinutes();
       let endTime = AMPM
         ? formatAMPM(end)
-        : end.getHours() +
-          ":" +
-          (end.getMinutes() < 10 ? "0" : "") +
-          end.getMinutes();
+        : end.getMinutes() === 0
+          ? end.getHours().toString()
+          : end.getHours() + ":" + (end.getMinutes() < 10 ? "0" : "") + end.getMinutes();
 
-      timeStrings.push(`${startTime} - ${endTime} ${shorttz}`);
+      timeStrings.push(`${startTime}-${endTime} ${shorttz}`);
     }
 
     // Get day info from the first timezone
@@ -114,6 +214,12 @@ export function outputToString(output, timeZones, messageType, AMPM, MonthDay) {
   if (messageTypes[5] === messageType) {
     // Inverse
     result.unshift("I cannot do these times:");
+  }
+  if (messageTypes[6] === messageType) {
+    // Table format
+    result = generateTableFormat(output, timeZoneArray, AMPM, MonthDay);
+    result.unshift("I'm available these times:");
+    result.splice(1, 0, ""); // Add empty line after header
   }
 
   return result;
